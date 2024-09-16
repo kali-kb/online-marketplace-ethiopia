@@ -1,0 +1,28 @@
+{
+  "name": "node-express-api",
+  "description": "Simple api sample in Node",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "author": "Google LLC",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@xata.io/client": "^0.30.0",
+    "aws-sdk": "^2.1691.0",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.33.0",
+    "express": "^4.17.1",
+    "pg": "^8.12.0",
+    "telegraf": "^4.16.3",
+    "vercel": "^37.4.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.24.2",
+    "nodemon": "^3.1.4"
+  }
+}
