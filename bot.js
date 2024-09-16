@@ -329,4 +329,4 @@ bot.on("inline_query", authMiddleware, async (ctx) => {
 // })
 
 
-// export default bot
+export default bot
