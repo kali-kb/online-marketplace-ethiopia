@@ -1,5 +1,6 @@
 import express from 'express';
 import { db } from './db.js';
+import cors from 'cors';
 import { product, category, user } from './schema.js';
 import { eq } from 'drizzle-orm';
 import bot from "./bot.js"
@@ -8,16 +9,24 @@ import bot from "./bot.js"
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.json());
+const corsOptions = {
+  origin: "*",
+  credentials: true
+};
 
-// Enable CORS for all routes
+app.use(cors(corsOptions));
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   next();
 });
 
+
+
+app.use(express.json());
+
+// Enable CORS for all domains
 
 
 // Error handling middleware
@@ -81,8 +90,6 @@ app.get('/products/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
 
 // Fetch products of a single category
 app.get('/categories/:id/products', async (req, res) => {
