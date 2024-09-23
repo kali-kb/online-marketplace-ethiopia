@@ -2,7 +2,7 @@ import express from 'express';
 import { db } from './db.js';
 import cors from 'cors';
 import { product, category, user } from './schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import bot from "./bot.js"
 
 
@@ -44,14 +44,26 @@ app.get('/', async(req,res) => {
 // Fetch list of products
 app.get('/products', async (req, res) => {
   try {
-    const products = await db.select().from(product).leftJoin(user, eq(product.seller, user.id));
+    const searchTerm = req.query.search;
+    let products;
+    if (searchTerm) {
+      products = await db
+        .select()
+        .from(product)
+        .leftJoin(user, eq(product.seller, user.id))
+        .where(sql`${product.name} LIKE ${`%${searchTerm}%`}`);
+    } else {
+      products = await db
+        .select()
+        .from(product)
+        .leftJoin(user, eq(product.seller, user.id));
+    }
     res.json(products);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 // Fetch products by category
 app.get('/categories/:id/products', async (req, res) => {
