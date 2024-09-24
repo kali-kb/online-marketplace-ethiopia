@@ -101,6 +101,7 @@ const getProductById = async (productId) => await db.select().from(product).wher
 
 //////////// commands ///////////////
 bot.command('start', (ctx) => {
+  if(ctx.session.formState) { ctx.session.formState = null }
   ctx.reply('Welcome 👋, what do you want to do?', Markup.keyboard([
     ['Add Product', 'My Products'],
   ]).resize())
