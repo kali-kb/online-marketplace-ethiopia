@@ -120,10 +120,10 @@ bot.command('cancel', (ctx) => {
 bot.action('add_product', async (ctx) => {
   console.log('add_product action triggered');
   try {
-    await ctx.answerCbQuery();
     ctx.session.formState = 'name';
     ctx.session.formData = {};
     await ctx.reply("What is the name of the product?, or use /cancel to quit the form", Markup.removeKeyboard());
+    await ctx.answerCbQuery();
   } catch (error) {
     console.error('Error in add_product action:', error);
   }
@@ -132,14 +132,17 @@ bot.action('add_product', async (ctx) => {
 bot.action(/^delete:(\d+)$/, async (ctx) => {
   console.log("product deletion executed")
   const productId = ctx.match[1]
-  ctx.session.deletingProductId = productId
-  await ctx.editMessageText("Are you sure you want to delete?")
-  await ctx.editMessageReplyMarkup({
-    inline_keyboard: [
-      [Markup.button.callback("Yes", "confirm_delete")],
-      [Markup.button.callback("No", "cancel_delete")],
-    ]
-  })
+  if (!ctx.session.deletingProductId) {
+    ctx.session.deletingProductId = productId
+    await ctx.editMessageText("Are you sure you want to delete?")
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: [
+        [Markup.button.callback("Yes", "confirm_delete"),Markup.button.callback("No", "cancel_delete")],
+      ]
+    })
+  } else {
+    ctx.answerCbQuery("You can only perform operation on one product at a time")
+  }
 })
 
 bot.action('confirm_delete', async (ctx) => {
@@ -158,22 +161,22 @@ bot.action('confirm_delete', async (ctx) => {
 })
 
 bot.action('cancel_delete', async (ctx) => {
-  const productId = ctx.session.deletingProductId
-  if (productId) {
+  const productId = ctx.session.deletingProductId;
+  if (productId && ctx.session.productDetails[productId]) {
     try {
-      const product = await getProductById(productId)
-      const message = `Product: ${product.name}\nPrice: ${product.price}\nDescription: ${product.description}\nSeller: @${product.seller}\n`
-      await ctx.editMessageText(message)
+      const { name, price, description, seller } = ctx.session.productDetails[productId];
+      const message = `Product: ${name}\nPrice: ${price}\nDescription: ${description}\nSeller: ${seller}\n`;
+      await ctx.editMessageText(message);
       await ctx.editMessageReplyMarkup({
-        inline_keyboard: [[Markup.button.callback("Delete", `delete:${productId}`)]]
-      })
+        inline_keyboard: [[Markup.button.callback("Delete", `delete:${productId}`)]],
+      });
     } catch (error) {
-      console.error("Error restoring product message:", error)
-      await ctx.answerCbQuery("Failed to restore product message")
+      console.error("Error restoring product message:", error);
+      await ctx.answerCbQuery("Failed to restore product message");
     }
   }
-  delete ctx.session.deletingProductId
-})
+  delete ctx.session.deletingProductId;
+});
 
 bot.action('save_product', authMiddleware, async (ctx) => {
   console.log("executed save_product")
@@ -220,14 +223,22 @@ bot.on('text', authMiddleware, async (ctx) => {
         await ctx.reply("--- All Products ---")
         const products = await getProducts(ctx.userData.userId)
         if (products.length == 0) {
-          ctx.reply("No posted products")
+          ctx.reply("No posted products");
         } else {
+          ctx.session.productDetails = {}; // Initialize the object
           for (const item of products) {
-            const { product, user } = item 
-            const message = `Product: ${product.name}\nPrice: ${product.price}\nDescription: ${product.description}\nSeller: @${ctx.from.username}\n`
+            const { product, user } = item;
+            const message = `Product: ${product.name}\nPrice: ${product.price}\nDescription: ${product.description}\nSeller: @${ctx.from.username}\n`;
+            ctx.session.productDetails[product.id] = {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              description: product.description,
+              seller: user.contact,
+            };
             await ctx.reply(message, Markup.inlineKeyboard([
-              [Markup.button.callback("Delete", `delete:${product.id}`)]
-            ]))
+              [Markup.button.callback("Delete", `delete:${product.id}`)],
+            ]));
           }
         }
         break
