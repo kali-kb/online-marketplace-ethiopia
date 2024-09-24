@@ -18,15 +18,18 @@ bot.use(session())
 bot.use((ctx, next) => {
   if (!ctx.session) {
     ctx.session = {};
+    console.log('Session initialized');
   }
   if (!ctx.session.formData) {
     ctx.session.formData = {};
+    console.log('Form data initialized');
   }
   return next();
 });
 
 
 const authMiddleware = async(ctx, next) => {
+  console.log("auth executed")
   if (!ctx.userData) {
     const userObj = await getUser(ctx.from.id)
     if(!userObj) {
@@ -87,7 +90,8 @@ const getUser = async (tgUserId) => {
 
 const getCategories = async () => await db.select().from(category)
 
-const getProducts = async (username) => await db.select().from(product).where(eq(product.seller, username.toString())).leftJoin(user, eq(product.seller, user.id));
+const getProducts = async (userId) => await db.select().from(product).where(eq(product.seller, userId)).leftJoin(user, eq(product.seller, user.id)).limit(10);
+// const getProducts = async (userId) => await db.select().from(product).where(eq(product.seller, userId.toString())).leftJoin(user, eq(product.seller, user.id));
 
 const deleteProduct = async (productId) => await db.delete(product).where(eq(product.id, productId))
 
@@ -114,13 +118,19 @@ bot.command('cancel', (ctx) => {
 
 //////////// actions ///////////////
 bot.action('add_product', async (ctx) => {
-  ctx.session.formState = 'name'
-  ctx.session.formData = {}
-  await ctx.answerCbQuery()
-  await ctx.reply("What is the name of the product?, or use /cancel to quit the form", Markup.removeKeyboard())
+  console.log('add_product action triggered');
+  try {
+    await ctx.answerCbQuery();
+    ctx.session.formState = 'name';
+    ctx.session.formData = {};
+    await ctx.reply("What is the name of the product?, or use /cancel to quit the form", Markup.removeKeyboard());
+  } catch (error) {
+    console.error('Error in add_product action:', error);
+  }
 })
 
 bot.action(/^delete:(\d+)$/, async (ctx) => {
+  console.log("product deletion executed")
   const productId = ctx.match[1]
   ctx.session.deletingProductId = productId
   await ctx.editMessageText("Are you sure you want to delete?")
@@ -166,6 +176,7 @@ bot.action('cancel_delete', async (ctx) => {
 })
 
 bot.action('save_product', authMiddleware, async (ctx) => {
+  console.log("executed save_product")
   const { formData } = ctx.session
   const productData = {
     ...formData,
@@ -294,7 +305,8 @@ bot.on('photo', async (ctx) => {
 //////////// inlinequery ///////////////
 bot.on("inline_query", authMiddleware, async (ctx) => {
   const query = ctx.inlineQuery.query.toLowerCase()
-  const products = await getProducts(1)
+  console.log("user id:", ctx.userData.userId)
+  const products = await getProducts(ctx.userData.userId)
   console.log(products)
   const results = products
     .filter(product => product.product.name.toLowerCase().includes(query))
@@ -303,30 +315,22 @@ bot.on("inline_query", authMiddleware, async (ctx) => {
       id: product.product.id.toString(),
       title: product.product.name,
       description: `Price: ${product.product.price}\nCondition: ${product.product.condition}`,
-      thumb_url: product.product.image_urls[0],
+      thumb_url: product.product.images[0],
       input_message_content: {
         message_text: `Product: ${product.product.name}\nPrice: ${product.product.price}\nCondition: ${product.product.condition}\nSeller: ${product.user.contact}`
-      }
+      },
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Delete', callback_data: `delete:${product.product.name}` }],
+        ]
+      },
     }))
-  await ctx.answerInlineQuery(results)
+  await ctx.answerInlineQuery(results, {cache_time: 4})
 })
 //////////// inlinequery ///////////////
 
 
 
-// Middleware to parse JSON bodies
-// app.use(express.json())
-
-// api.get('/', (req, res) => {
-//   res.send('works!')
-// })
-
-
-// // Start the server
-// const PORT = process.env.PORT || 3000
-// app.listen(PORT, () => {
-//   console.log(`Webhook server is listening on port ${PORT}`)
-// })
 
 
 export default bot
