@@ -51,7 +51,8 @@ app.get('/products', async (req, res) => {
         .select()
         .from(product)
         .leftJoin(user, eq(product.seller, user.id))
-        .where(sql`${product.name} LIKE ${`%${searchTerm}%`}`);
+
+        .where(sql`LOWER(${product.name}) LIKE LOWER(${`%${searchTerm}%`})`);
     } else {
       products = await db
         .select()
@@ -63,8 +64,8 @@ app.get('/products', async (req, res) => {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-});
 
+});
 // Fetch products by category
 app.get('/categories/:id/products', async (req, res) => {
   try {
