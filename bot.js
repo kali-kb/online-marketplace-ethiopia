@@ -252,7 +252,7 @@ bot.on('text', authMiddleware, async (ctx) => {
         await ctx.reply("What is the Price in ETB?, or use /cancel to quit the form")
         break
       case 'price':
-        formData.price = text
+        formData.price = text.replace(/,/g, '');
         ctx.session.formState = 'description'
         await ctx.reply("Write Description for the product, or send /skip to leave it empty or use /cancel to quit the form")
         break
